@@ -2,8 +2,18 @@ Package: postGIStools
 Type: Package
 Title: Tools for Interacting with PostgreSQL / PostGIS Databases
 Version: 0.1.0
+Depends:
+    R (>= 3.2.3),
+    sp (>= 1.2)
+Imports:
+    DBI (>= 0.3),
+    jsonlite (>= 0.9),
+    rgeos (>= 0.3),
+    RPostgreSQL (>= 0.4),
+    stringr (>= 1.0)
 Authors@R: person('Philippe', 'Marchand', email = 'pmarchand@sesync.org',
-                role = c('aut', 'cre'))
+                  role = c('aut', 'cre'))
 Description: [...]
 License: GPL-3
 LazyData: TRUE
+RoxygenNote: 5.0.1
