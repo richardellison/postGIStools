@@ -1,0 +1,9 @@
+Package: postGIStools
+Type: Package
+Title: Tools for Interacting with PostgreSQL / PostGIS Databases
+Version: 0.1.0
+Authors@R: person('Philippe', 'Marchand', email = 'pmarchand@sesync.org',
+                role = c('aut', 'cre'))
+Description: [...]
+License: GPL-3
+LazyData: TRUE
