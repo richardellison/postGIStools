@@ -2,4 +2,8 @@
 
 export("%->%")
 export("%->%<-")
+export(get_postgis_query)
 export(new_hstore)
+export(postgis_insert)
+export(postgis_update)
+import(sp)

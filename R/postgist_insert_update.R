@@ -1,0 +1,141 @@
+
+#' @export
+postgis_insert <- function(conn, df, tbl, write_cols = NA,
+                           geom_name = NA_character_,
+                           hstore_name = NA_character_) {
+    query_text <- prep_write_query(conn, df, tbl, mode = "insert", write_cols,
+                                   NA, NA, geom_name, hstore_name)
+    RPostgreSQL::dbSendQuery(conn, query_text)
+}
+
+#' @export
+postgis_update <- function(conn, df, tbl, id_cols, update_cols,
+                            geom_name = NA_character_,
+                            hstore_name = NA_character_) {
+    query_text <- prep_write_query(conn, df, tbl, mode = "update", NA, id_cols,
+                                   update_cols, geom_name, hstore_name)
+    RPostgreSQL::dbSendQuery(conn, query_text)
+}
+
+
+# Function to build query string for INSERT or UPDATE query (based on "mode")
+#  (not exported)
+prep_write_query <- function(conn, df, tbl, mode, write_cols, id_cols,
+                             update_cols, geom_name, hstore_name) {
+    # Check inputs
+    if (!is(conn, "PostgreSQLConnection")) {
+        stop("conn is not a valid PostgreSQL connection")
+    }
+    if (!is(df, "data.frame") & !is(df, "Spatial")) {
+        stop("df must be a data.frame or Spatial*DataFrame")
+    }
+    test_single_str(tbl)
+    test_single_str(geom_name)
+    test_single_str(hstore_name)
+    if (mode == "update" & length(intersect(id_cols, update_cols)) > 0) {
+        stop("the same column cannot appear in id_cols and update_cols")
+    }
+
+    # Make shortcut functions for quoting
+    quote_id <- make_id_quote(conn)
+    quote_str <- make_str_quote(conn)
+
+    # Subset columns of df based on write_cols (if not NA);
+    #  if spatial data frame, convert spatial objects into WKT
+    if (!is.na(geom_name)) {
+        if (!is(df, "Spatial")) {
+            stop("geom_name specified but df is not a spatial object")
+        }
+        if (all(is.na(write_cols))) {
+            write_cols <- colnames(df@data)
+        } else if (!all(write_cols %in% colnames(df@data))) {
+            stop(paste("columns not found in df:",
+                       paste(setdiff(write_cols, colnames(df@data)),
+                             collapse = ", ")))
+        }
+        df <- cbind(df@data[, write_cols, drop = FALSE],
+                    rgeos::writeWKT(df, byid = TRUE), stringsAsFactors = FALSE)
+        igeom <- ncol(df)
+        colnames(df)[igeom] <- geom_name
+    } else {
+        if (is(df, "Spatial")) {
+            stop("geom_name must be specified since df is as spatial object")
+        }
+        if (all(is.na(write_cols))) {
+            write_cols <- colnames(df)
+        } else if (!all(write_cols %in% colnames(df))) {
+            stop(paste("columns not found in df:",
+                       paste(setdiff(write_cols, colnames(df)),
+                             collapse = ", ")))
+        }
+        df <- df[, write_cols, drop = FALSE]
+    }
+
+    # Convert any factor columns to characters
+    fact_cols <- vapply(df, is.factor, FALSE)
+    df[, fact_cols] <- lapply(df[, fact_cols], as.character)
+
+    # If mode == update, check that no id_cols or update_cols are missing
+    if (mode == "update" & !all(c(id_cols, update_cols) %in% colnames(df))) {
+        stop(paste("columns not found in df:",
+                   paste(setdiff(c(id_cols, update_cols), colnames(df)),
+                         collapse = ", ")))
+    }
+
+    # Convert hstore column (if present) to JSON text, then hstore text
+    if (!is.na(hstore_name)) {
+        if (!all(vapply(df[[hstore_name]], is.list, FALSE))) {
+            stop(paste("column", deparse(substitute(hstore_name)),
+                       "is not a valid hstore"))
+        }
+        df[[hstore_name]] <- vapply(df[[hstore_name]], jsonlite::toJSON, "")
+        df[[hstore_name]] <- json_to_hstore(df[[hstore_name]])
+    }
+
+    # Build multirow INSERT or UPDATE query
+    if (mode == "update") {
+        tbl_q <- quote_id(tbl)
+        tbl_tmp <- quote_id(paste0(tbl, "_tmp"))
+        update_q <- quote_id(update_cols)
+        update_tmp <- ifelse(!is.na(hstore_name) & update_cols == hstore_name,
+                             paste0(tbl_q, ".", update_q, " || ",
+                                    tbl_tmp, ".", update_q, "::hstore"),
+                             paste0(tbl_tmp, ".", update_q))
+        id_q <- quote_id(id_cols)
+
+        query_text <- paste("UPDATE", tbl_q, "SET",
+                            paste(update_q, "=", update_tmp, collapse = ", "),
+                            "FROM (VALUES")
+    } else {  # mode == "insert"
+        col_ids <- quote_id(colnames(df))
+        query_text <- paste("INSERT INTO", quote_id(tbl), "(",
+                            paste(col_ids, collapse = ", "), ") VALUES")
+    }
+
+    # Convert data frame to character array
+    #  quoting character columns and replacing NAs with NULLs
+    df_q <- do.call(cbind, lapply(df, function(var) {
+        if(is.character(var)) quote_str(var)
+        else var
+    }))
+    df_q[is.na(df_q) | df_q == "'NA'"] <- "NULL"
+
+    if (!is.na(geom_name)) {
+        df_q[, igeom] <- paste0("ST_GeomFromText(", df_q[, igeom], ")")
+    }
+
+    query_values <- apply(df_q, 1, function(row) {
+        paste("(", paste(row, collapse = ", "), ")")
+    })
+    query_text <- paste(query_text, paste(query_values, collapse = ", "))
+
+    if (mode == "update") {
+        query_text <- paste(query_text, ") AS", tbl_tmp, "(",
+                            paste(quote_id(colnames(df)), collapse = ", "), ")",
+                            "WHERE", paste(paste0(tbl_q, ".", id_q), "=",
+                                           paste0(tbl_tmp, ".", id_q),
+                                           collapse = " AND "))
+    }
+
+    query_text
+}
