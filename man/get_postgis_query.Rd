@@ -9,16 +9,16 @@ get_postgis_query(conn, statement, geom_name = NA_character_,
 }
 \arguments{
 \item{conn}{A \code{\link[RPostgreSQL]{PostgreSQLConnection-class}} object,
-such as the output of \code{\link[DBI]{dbConnect}}}
+such as the output of \code{\link[DBI]{dbConnect}}.}
 
-\item{statement}{Character string for a SQL SELECT query}
+\item{statement}{Character string for a SQL SELECT query.}
 
-\item{geom_name}{Name of the geometry column (\code{NA} if none)}
+\item{geom_name}{Name of the geometry column (\code{NA} if none).}
 
-\item{hstore_name}{Name of the hstore column (\code{NA} if none)}
+\item{hstore_name}{Name of the hstore column (\code{NA} if none).}
 }
 \value{
-Either a data frame (if \code{geom = NA}) or a
+Either a data frame (if \code{geom_name = NA}) or a
   Spatial[Points/Lines/Polygons]DataFrame containing the query result. If a
   hstore column is present, it appears as a list-column in the data frame,
   i.e. each cell is a named list of key-value pairs.
@@ -30,6 +30,8 @@ and/or a PostGIS geometry, in which case the output is a spatial data frame
 (from the \code{\link[sp]{sp}} package).
 }
 \seealso{
-The \code{\link{\%->\%}} operator for working with hstore columns.
+The \code{\link{\%->\%}} operator for working with hstore columns;
+  \code{\link{postgis_insert}} and \code{\link{postgis_update}} for writing
+  to a PostgreSQL connection.
 }
 

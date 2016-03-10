@@ -10,11 +10,11 @@ hstore \%->\% key
 hstore \%->\% key <- value
 }
 \arguments{
-\item{hstore}{A hstore (i.e. list of lists)}
+\item{hstore}{A hstore (i.e. list of lists).}
 
-\item{key}{Character string corresponding to a key in \code{hstore}}
+\item{key}{Character string corresponding to a key in \code{hstore}.}
 
-\item{value}{Vector of values of the same length as \code{hstore}}
+\item{value}{Vector of values of the same length as \code{hstore}.}
 }
 \value{
 For the extract version, a vector of the same length as \code{hstore},

@@ -28,8 +28,8 @@ new_hstore <- function(nr) {
 #' you must use single brackets so that the result remains a list of lists. See
 #' below for usage examples.
 #'
-#' @param hstore A hstore (i.e. list of lists)
-#' @param key Character string corresponding to a key in \code{hstore}
+#' @param hstore A hstore (i.e. list of lists).
+#' @param key Character string corresponding to a key in \code{hstore}.
 #' @return For the extract version, a vector of the same length as \code{hstore},
 #'  containing the value correponding to \code{key} for each record
 #'  (or \code{NA} if none). For the replace version, the modified hstore.
@@ -45,7 +45,7 @@ new_hstore <- function(nr) {
     unlist(lst)
 }
 
-#' @param value Vector of values of the same length as \code{hstore}
+#' @param value Vector of values of the same length as \code{hstore}.
 #' @usage hstore \%->\% key <- value
 #' @export
 #' @rdname extract-hstore

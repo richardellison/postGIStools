@@ -6,15 +6,17 @@
 #' (from the \code{\link[sp]{sp}} package).
 #'
 #' @param conn A \code{\link[RPostgreSQL]{PostgreSQLConnection-class}} object,
-#'   such as the output of \code{\link[DBI]{dbConnect}}
-#' @param statement Character string for a SQL SELECT query
-#' @param geom_name Name of the geometry column (\code{NA} if none)
-#' @param hstore_name Name of the hstore column (\code{NA} if none)
-#' @return Either a data frame (if \code{geom = NA}) or a
+#'   such as the output of \code{\link[DBI]{dbConnect}}.
+#' @param statement Character string for a SQL SELECT query.
+#' @param geom_name Name of the geometry column (\code{NA} if none).
+#' @param hstore_name Name of the hstore column (\code{NA} if none).
+#' @return Either a data frame (if \code{geom_name = NA}) or a
 #'   Spatial[Points/Lines/Polygons]DataFrame containing the query result. If a
 #'   hstore column is present, it appears as a list-column in the data frame,
 #'   i.e. each cell is a named list of key-value pairs.
-#' @seealso The \code{\link{\%->\%}} operator for working with hstore columns.
+#' @seealso The \code{\link{\%->\%}} operator for working with hstore columns;
+#'   \code{\link{postgis_insert}} and \code{\link{postgis_update}} for writing
+#'   to a PostgreSQL connection.
 #' @export
 get_postgis_query <- function(conn, statement, geom_name = NA_character_,
                               hstore_name = NA_character_) {

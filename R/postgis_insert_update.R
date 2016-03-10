@@ -1,4 +1,39 @@
-
+#' Insert or update records in a PostgreSQL table from a R data frame.
+#'
+#' These functions produce INSERT (\code{postgis_insert}) or UPDATE (\code{postgis_update})
+#' queries to write data from a R data frame to a PostgreSQL table, with options
+#' to include a geometry layer and a list-column of key-value pairs (as a PostgreSQL hstore).
+#' The queries are passed to the database with \code{\link[DBI]{dbSendQuery}}.
+#'
+#' All column names used in the query must match between the input data frame and
+#' the target database table (except for \code{geom_name} which only applies to
+#' the table).
+#'
+#' \code{postgis_update} creates an \emph{UPDATE ... SET ... FROM ...} query,
+#' which effectively joins the original table and input data frame based on matching
+#' values in \code{id_cols}, then updates the values in \code{update_cols}.
+#' The combination of \code{id_cols} must be unique in \code{df}, but they can
+#' be duplicated in the database table, in which case multiple rows are updated
+#' from a single row in \code{df}.
+#'
+#' Note that hstore columns are updated by \emph{concatenation}, i.e. new keys are
+#' added, values associated with existing keys are updated, no keys are deleted.
+#'
+#' @param conn A \code{\link[RPostgreSQL]{PostgreSQLConnection-class}} object,
+#'   such as the output of \code{\link[DBI]{dbConnect}}.
+#' @param df A data frame (if \code{geom_name = NA}) or
+#'   Spatial[Points/Lines/Polygons]DataFrame.
+#' @param tbl Name of the PostgreSQL table to write to.
+#' @param geom_name Name of the geometry column in the database table
+#'   (\code{NA} if none).
+#' @param hstore_name Name of the hstore column in both \code{df} and the
+#'   database table (\code{NA} if none).
+#' @param write_cols A character vector, corresponding to the columns in
+#'   \code{df} to insert in the database table. If \code{NA}, inserts all columns.
+#' @return The result of \code{\link[DBI]{dbSendQuery}}.
+#' @seealso \code{\link{get_postgis_query}} for the inverse operation
+#'   (read from database to R).
+#' @rdname postgis_insert_update
 #' @export
 postgis_insert <- function(conn, df, tbl, write_cols = NA,
                            geom_name = NA_character_,
@@ -8,6 +43,12 @@ postgis_insert <- function(conn, df, tbl, write_cols = NA,
     RPostgreSQL::dbSendQuery(conn, query_text)
 }
 
+
+#' @param id_cols A character vector, corresponding to the columns in \code{df}
+#'   used to match records between \code{df} and the database table.
+#' @param update_cols A character vector, corresponding to the columns that
+#'   must be updated in the database table based on values in \code{df}.
+#' @rdname postgis_insert_update
 #' @export
 postgis_update <- function(conn, df, tbl, id_cols, update_cols,
                             geom_name = NA_character_,
