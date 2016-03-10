@@ -117,11 +117,16 @@ prep_write_query <- function(conn, df, tbl, mode, write_cols, id_cols,
     df[, fact_cols] <- lapply(df[, fact_cols], as.character)
 
     # If mode == update, check that no id_cols or update_cols are missing
-    if (mode == "update" & !all(c(id_cols, update_cols) %in% colnames(df))) {
-        stop(paste("columns not found in df:",
-                   paste(setdiff(c(id_cols, update_cols), colnames(df)),
-                         collapse = ", ")))
+    #   and that id_cols uniquely identify records
+    if (mode == "update") {
+        if (!all(c(id_cols, update_cols) %in% colnames(df)))
+            stop(paste("columns not found in df:",
+                       paste(setdiff(c(id_cols, update_cols), colnames(df)),
+                             collapse = ", ")))
+        if (any(duplicated(df[, id_cols])))
+            stop("id_cols do not uniquely identify rows in df")
     }
+
 
     # Convert hstore column (if present) to JSON text, then hstore text
     if (!is.na(hstore_name)) {

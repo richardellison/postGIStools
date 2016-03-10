@@ -39,7 +39,7 @@ must be updated in the database table based on values in \code{df}.}
 The result of \code{\link[DBI]{dbSendQuery}}.
 }
 \description{
-These functions produce INSERT (\code{postgis_insert}) or UPDATE (postgis_update)
+These functions produce INSERT (\code{postgis_insert}) or UPDATE (\code{postgis_update})
 queries to write data from a R data frame to a PostgreSQL table, with options
 to include a geometry layer and a list-column of key-value pairs (as a PostgreSQL hstore).
 The queries are passed to the database with \code{\link[DBI]{dbSendQuery}}.
