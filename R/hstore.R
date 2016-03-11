@@ -5,6 +5,14 @@
 #'
 #' @param nr Number of records.
 #' @return A empty hstore (list of lists) of length \code{nr}.
+#'
+#' @examples
+#' contacts <- data.frame(name = c("Anne", "Bert", "Chris"))
+#' contacts$phone <- new_hstore(3)
+#' contacts$phone %->% 'home' <- c("555-123-4567", "555-923-9134", "555-276-1123")
+#' contacts$phone[2] %->% 'cell' <- "555-889-9134"
+#' str(contacts)
+#'
 #' @seealso \code{\link{\%->\%}} to read or edit the resulting data structure.
 #' @export
 new_hstore <- function(nr) {
@@ -33,6 +41,19 @@ new_hstore <- function(nr) {
 #' @return For the extract version, a vector of the same length as \code{hstore},
 #'  containing the value correponding to \code{key} for each record
 #'  (or \code{NA} if none). For the replace version, the modified hstore.
+#'
+#' @examples
+#' contacts <- data.frame(name = c("Anne", "Bert", "Chris"))
+#' contacts$phone <- new_hstore(3)
+#' contacts$phone %->% 'home' <- c("555-123-4567", "555-923-9134", "555-276-1123")
+#' contacts$phone[2:3] %->% 'home'
+#'
+#' contacts$phone[2] %->% 'home' <- NULL
+#' contacts$phone %->% 'home'
+#' contacts$phone[2] %->% 'cell' <- "555-889-9134"
+#' contacts$phone %->% 'cell'
+#'
+#' @seealso \code{\link{new_hstore}} to create a empty hstore.
 #' @export
 #' @rdname extract-hstore
 `%->%` <- function(hstore, key) {

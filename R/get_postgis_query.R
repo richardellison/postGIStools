@@ -14,6 +14,20 @@
 #'   Spatial[Points/Lines/Polygons]DataFrame containing the query result. If a
 #'   hstore column is present, it appears as a list-column in the data frame,
 #'   i.e. each cell is a named list of key-value pairs.
+#'
+#' @examples
+#' \dontrun{
+#' library(RPostgreSQL)
+#' con <- dbConnect(PostgreSQL(), dbname = "my_db")
+#'
+#' # If geom column holds points, returns a SpatialPointsDataFrame
+#' cities <- get_postgis_query(con, "SELECT name, geom, datalist FROM city",
+#'                             geom_name = "geom", hstore_name = "datalist")
+#'
+#' # Get the populations (part of datalist hstore) as a vector
+#' pop <- cities@data$datalist %->% "population"
+#' }
+#'
 #' @seealso The \code{\link{\%->\%}} operator for working with hstore columns;
 #'   \code{\link{postgis_insert}} and \code{\link{postgis_update}} for writing
 #'   to a PostgreSQL connection.

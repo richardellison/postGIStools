@@ -59,6 +59,29 @@ from a single row in \code{df}.
 Note that hstore columns are updated by \emph{concatenation}, i.e. new keys are
 added, values associated with existing keys are updated, no keys are deleted.
 }
+\examples{
+\dontrun{
+library(RPostgreSQL)
+con <- dbConnect(PostgreSQL(), dbname = "my_db")
+
+# Returns a SpatialPointsDataFrame
+cities <- get_postgis_query(con, "SELECT name, geom, datalist FROM city",
+                            geom_name = "geom", hstore_name = "datalist")
+
+# Create a new field in hstore and update DB
+cities@data$datalist \%->\% "pop_density" <-
+   cities@data$datalist \%->\% "population" / cities@data$datalist \%->\% "area"
+postgis_update(con, cities, "city",
+               id_cols = "name", update_cols = "datalist",
+               geom_name = "geom", hstore_name = "datalist")
+
+# Add rows to DB with postgis_insert
+# (new_cities is a SpatialPointsDataFrame with same columns as cities)
+postgis_insert(con, new_cities, "city",
+               geom_name = "geom", hstore_name = "datalist")
+}
+
+}
 \seealso{
 \code{\link{get_postgis_query}} for the inverse operation
   (read from database to R).

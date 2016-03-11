@@ -29,6 +29,20 @@ selected columns include a PostgreSQL hstore, which is parsed as a list-column,
 and/or a PostGIS geometry, in which case the output is a spatial data frame
 (from the \code{\link[sp]{sp}} package).
 }
+\examples{
+\dontrun{
+library(RPostgreSQL)
+con <- dbConnect(PostgreSQL(), dbname = "my_db")
+
+# If geom column holds points, returns a SpatialPointsDataFrame
+cities <- get_postgis_query(con, "SELECT name, geom, datalist FROM city",
+                            geom_name = "geom", hstore_name = "datalist")
+
+# Get the populations (part of datalist hstore) as a vector
+pop <- cities@data$datalist \%->\% "population"
+}
+
+}
 \seealso{
 The \code{\link{\%->\%}} operator for working with hstore columns;
   \code{\link{postgis_insert}} and \code{\link{postgis_update}} for writing
