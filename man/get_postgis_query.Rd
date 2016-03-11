@@ -45,7 +45,7 @@ pop <- cities@data$datalist \%->\% "population"
 }
 \references{
 The code for importing geom fields is based on a blog post by
-  Lee Hachadoorian: \href{http://www.r-bloggers.com/load-postgis-geometries-in-r-without-rgdal/}{Load PostGIS geometries in R without rgdal}
+  Lee Hachadoorian: \href{http://www.r-bloggers.com/load-postgis-geometries-in-r-without-rgdal/}{Load PostGIS geometries in R without rgdal}.
 }
 \seealso{
 The \code{\link{\%->\%}} operator for working with hstore columns;
