@@ -13,7 +13,9 @@ Imports:
     stringr (>= 1.0)
 Authors@R: person('Philippe', 'Marchand', email = 'pmarchand@sesync.org',
                   role = c('aut', 'cre'))
-Description: [...]
+Description: This package includes functions to convert geometry and hstore
+    data types from PostgreSQL into standard R objects, as well as to simplify
+    the import of R data frames (including spatial data frames) into PostgreSQL.
 License: GPL-3
 LazyData: TRUE
 RoxygenNote: 5.0.1
