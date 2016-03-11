@@ -1,3 +1,5 @@
+[![Travis-CI Build Status](https://travis-ci.org/SESYNC-ci/postGIStools.svg?branch=master)](https://travis-ci.org/SESYNC-ci/postGIStools)
+
 ## Purpose ##
 
 This package simplifies the R interface to PostgreSQL databases containing geometries and associated hstore fields.
