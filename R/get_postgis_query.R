@@ -61,7 +61,8 @@ edit_select_query <- function(conn, statement, geom_name, hstore_name) {
     # Make shortcut functions for SQL quoting
     quote_id <- make_id_quote(conn)
 
-    # Add conversion of geom field to WKT text format
+    # Convert geom field to WKT text format
+    #  and join with spatial_ref_sys for projection information
     new_query <- statement
     if (!is.na(geom_name)) {
         if (!grepl(geom_name, new_query, fixed = TRUE)) {
@@ -70,8 +71,13 @@ edit_select_query <- function(conn, statement, geom_name, hstore_name) {
             geom_name <- NA
         } else {
             geom_sub <- paste0("ST_AsText(", quote_id(geom_name), ") AS ",
-                               quote_id(paste0(geom_name, "_wkt")))
+                               quote_id(paste0(geom_name, "_wkt")), ", ",
+                               "ST_SRID(", quote_id(geom_name), ") AS ",
+                               quote_id(paste0(geom_name, "_srid")))
             new_query <- gsub(geom_name, geom_sub, new_query, fixed = TRUE)
+            new_query <- paste0("SELECT * FROM (", new_query, ") AS base_qry ",
+                                "JOIN spatial_ref_sys ON ",
+                                quote_id(paste0(geom_name, "_srid")), " = srid")
         }
     }
 
@@ -102,10 +108,17 @@ process_select_result <- function(res, geom_name, hstore_name) {
 
     # If it has geom, convert into Spatial*DataFrame
     if (!is.na(geom_name)) {
+        if (length(unique(res$proj4text)) > 1)
+            stop("Returned geometries do not share the same projection.")
+        proj <- unique(res$proj4text)
         geom_wkt <- paste0(geom_name, "_wkt")
         sp_obj <- do.call(rbind, Map(rgeos::readWKT, text = res[[geom_wkt]],
                                      id = 1:nrow(res)))
-        dat <- res[names(res) != geom_wkt]
+        proj4string(sp_obj) <- CRS(proj)
+        # Spatial columns to be discarded
+        sp_cols <- c(geom_wkt, paste0(geom_name, "_srid"), "srid", "auth_name",
+                     "auth_srid", "srtext", "proj4text")
+        dat <- res[!(names(res) %in% sp_cols)]
         if (is(sp_obj, "SpatialPoints")) {
             res <- SpatialPointsDataFrame(sp_obj, dat)
         } else if (is(sp_obj, "SpatialLines")) {
