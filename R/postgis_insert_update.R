@@ -117,6 +117,7 @@ prep_write_query <- function(conn, df, tbl, mode, write_cols, id_cols,
                        paste(setdiff(write_cols, colnames(df@data)),
                              collapse = ", ")))
         }
+        srid <- find_srid(conn, proj4string(df))
         df <- cbind(df@data[, write_cols, drop = FALSE],
                     rgeos::writeWKT(df, byid = TRUE), stringsAsFactors = FALSE)
         igeom <- ncol(df)
@@ -190,7 +191,7 @@ prep_write_query <- function(conn, df, tbl, mode, write_cols, id_cols,
     df_q[is.na(df_q) | df_q == "'NA'"] <- "NULL"
 
     if (!is.na(geom_name)) {
-        df_q[, igeom] <- paste0("ST_GeomFromText(", df_q[, igeom], ")")
+        df_q[, igeom] <- paste0("ST_GeomFromText(", df_q[, igeom], ", ", srid, ")")
     }
 
     query_values <- apply(df_q, 1, function(row) {

@@ -8,6 +8,7 @@ Depends:
 Imports:
     DBI (>= 0.3),
     jsonlite (>= 0.9),
+    rgdal (>= 0.8),
     rgeos (>= 0.3),
     RPostgreSQL (>= 0.4),
     stringr (>= 1.0)

@@ -40,7 +40,7 @@ get_postgis_query <- function(conn, statement, geom_name = NA_character_,
     if (!is(conn, "PostgreSQLConnection")) {
         stop("conn is not a valid PostgreSQL connection")
     }
-    if (length(statement) != 1 | !grepl("SELECT", statement)) {
+    if (length(statement) != 1 | !grepl("^select", tolower(statement))) {
         stop("statement does not appear to be a SELECT query")
     }
     test_single_str(geom_name)
@@ -76,7 +76,7 @@ edit_select_query <- function(conn, statement, geom_name, hstore_name) {
                                quote_id(paste0(geom_name, "_srid")))
             new_query <- gsub(geom_name, geom_sub, new_query, fixed = TRUE)
             new_query <- paste0("SELECT * FROM (", new_query, ") AS base_qry ",
-                                "JOIN spatial_ref_sys ON ",
+                                "LEFT JOIN spatial_ref_sys ON ",
                                 quote_id(paste0(geom_name, "_srid")), " = srid")
         }
     }
