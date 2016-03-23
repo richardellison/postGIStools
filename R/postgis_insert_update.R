@@ -14,7 +14,8 @@
 #' values in \code{id_cols}, then updates the values in \code{update_cols}.
 #' The combination of \code{id_cols} must be unique in \code{df}, but they can
 #' be duplicated in the database table, in which case multiple rows are updated
-#' from a single row in \code{df}.
+#' from a single row in \code{df}. Neither the geometry nor the hstore column can be
+#' used in \code{id_cols}.
 #'
 #' Note that hstore columns are updated by \emph{concatenation}, i.e. new keys are
 #' added, values associated with existing keys are updated, no keys are deleted.
@@ -96,8 +97,13 @@ prep_write_query <- function(conn, df, tbl, mode, write_cols, id_cols,
     test_single_str(tbl)
     test_single_str(geom_name)
     test_single_str(hstore_name)
-    if (mode == "update" & length(intersect(id_cols, update_cols)) > 0) {
-        stop("the same column cannot appear in id_cols and update_cols")
+    if (mode == "update") {
+        if (length(intersect(id_cols, update_cols)) > 0) {
+            stop("the same column cannot appear in id_cols and update_cols")
+        }
+        if (geom_name %in% id_cols || hstore_name %in% id_cols) {
+            stop("geometry and hstore columns cannot be used in id_cols")
+        }
     }
 
     # Make shortcut functions for quoting

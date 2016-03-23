@@ -29,6 +29,11 @@ selected columns include a PostgreSQL hstore, which is parsed as a list-column,
 and/or a PostGIS geometry, in which case the output is a spatial data frame
 (from the \code{\link[sp]{sp}} package).
 }
+\details{
+Column names must be explicitly listed in the query, i.e. no \code{"SELECT *"}.
+The function issues a warning if a specified \code{geom_name} or
+\code{hstore_name} does not appear in \code{statement}.
+}
 \examples{
 \dontrun{
 library(RPostgreSQL)

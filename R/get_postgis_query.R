@@ -5,6 +5,10 @@
 #' and/or a PostGIS geometry, in which case the output is a spatial data frame
 #' (from the \code{\link[sp]{sp}} package).
 #'
+#' Column names must be explicitly listed in the query, i.e. no \code{"SELECT *"}.
+#' The function issues a warning if a specified \code{geom_name} or
+#' \code{hstore_name} does not appear in \code{statement}.
+#'
 #' @param conn A \code{\link[RPostgreSQL]{PostgreSQLConnection-class}} object,
 #'   such as the output of \code{\link[DBI]{dbConnect}}.
 #' @param statement Character string for a SQL SELECT query.

@@ -54,7 +54,8 @@ which effectively joins the original table and input data frame based on matchin
 values in \code{id_cols}, then updates the values in \code{update_cols}.
 The combination of \code{id_cols} must be unique in \code{df}, but they can
 be duplicated in the database table, in which case multiple rows are updated
-from a single row in \code{df}.
+from a single row in \code{df}. Neither the geometry nor the hstore column can be
+used in \code{id_cols}.
 
 Note that hstore columns are updated by \emph{concatenation}, i.e. new keys are
 added, values associated with existing keys are updated, no keys are deleted.
