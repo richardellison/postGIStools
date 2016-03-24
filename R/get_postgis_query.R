@@ -117,7 +117,7 @@ process_select_result <- function(res, geom_name, hstore_name) {
         proj <- unique(res$proj4text)
         geom_wkt <- paste0(geom_name, "_wkt")
         sp_obj <- do.call(rbind, Map(rgeos::readWKT, text = res[[geom_wkt]],
-                                     id = 1:nrow(res)))
+                                     id = 1:nrow(res), USE.NAMES = FALSE))
         proj4string(sp_obj) <- CRS(proj)
         # Spatial columns to be discarded
         sp_cols <- c(geom_wkt, paste0(geom_name, "_srid"), "srid", "auth_name",
