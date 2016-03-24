@@ -194,7 +194,8 @@ prep_write_query <- function(conn, df, tbl, mode, write_cols, id_cols,
         if(is.character(var)) quote_str(var)
         else var
     }))
-    df_q[is.na(df_q) | df_q == "'NA'"] <- "NULL"
+    na_inds <- do.call(cbind, lapply(df, is.na))
+    df_q[na_inds] <- "NULL"
 
     if (!is.na(geom_name)) {
         df_q[, igeom] <- paste0("ST_GeomFromText(", df_q[, igeom], ", ", srid, ")")
