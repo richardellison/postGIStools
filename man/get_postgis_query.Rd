@@ -30,7 +30,8 @@ and/or a PostGIS geometry, in which case the output is a spatial data frame
 (from the \code{\link[sp]{sp}} package).
 }
 \details{
-Column names must be explicitly listed in the query, i.e. no \code{"SELECT *"}.
+Column names must be explicitly listed in the query (i.e. no \code{"SELECT *"})
+and the geometry or hstore column should not be aliased (\code{AS}) or transformed.
 The function issues a warning if a specified \code{geom_name} or
 \code{hstore_name} does not appear in \code{statement}.
 }
