@@ -175,8 +175,10 @@ prep_write_query <- function(conn, df, tbl, mode, write_cols, id_cols,
         tbl_q <- quote_id(tbl)
         tbl_tmp <- quote_id(paste0(tbl, "_tmp"))
         update_q <- quote_id(update_cols)
+        # hstore updated by concatenation (||), with COALESCE in case of NULLs
         update_tmp <- ifelse(!is.na(hstore_name) & update_cols == hstore_name,
-                             paste0(tbl_q, ".", update_q, " || ",
+                             paste0("COALESCE(", tbl_q, ".", update_q,
+                                    ", hstore('')) || ",
                                     tbl_tmp, ".", update_q, "::hstore"),
                              paste0(tbl_tmp, ".", update_q))
         id_q <- quote_id(id_cols)

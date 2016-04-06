@@ -15,14 +15,19 @@ RPostgreSQL::dbSendQuery(con, paste("CREATE TEMP TABLE cty_tmp (name text,",
                                     "iso2 text PRIMARY KEY, capital text,",
                      "population integer, translations hstore, geom geometry)"))
 
+# Convenience function to re-import table from DB
+import_cty_tmp <- function() {
+    qry <- get_postgis_query(con, paste("SELECT name, iso2, capital, population,",
+                                        "translations, geom FROM cty_tmp"),
+                             geom_name = "geom", hstore_name = "translations")
+    qry[order(match(qry$iso2, country_sp$iso2)), ]
+}
+
 
 # Insert first two rows and re-import
 postgis_insert(con, country_sp[1:2, ], "cty_tmp",
                geom_name = "geom", hstore_name = "translations")
-qry <- get_postgis_query(con, paste("SELECT name, iso2, capital, population,",
-                                    "translations, geom FROM cty_tmp"),
-                         geom_name = "geom", hstore_name = "translations")
-qry <- qry[order(match(qry$iso2, country_sp$iso2)), ]
+qry <- import_cty_tmp()
 
 test_that("postgis_insert correctly inserts full rows", {
     expect_equal(country_sp[1:2, -5], qry[, -5])
@@ -37,10 +42,7 @@ postgis_insert(con, country_sp[3, ], "cty_tmp", write_cols = c("name", "iso2"),
 postgis_insert(con, country_sp[4, ], "cty_tmp",
                write_cols = c("name", "iso2", "translations"),
                geom_name = "geom", hstore_name = "translations")
-qry <- get_postgis_query(con, paste("SELECT name, iso2, capital, population,",
-                                    "translations, geom FROM cty_tmp"),
-                         geom_name = "geom", hstore_name = "translations")
-qry <- qry[order(match(qry$iso2, country_sp$iso2)), ]
+qry <- import_cty_tmp()
 
 test_that("postgis_insert correctly inserts partial rows", {
     expect_equal(country_sp@polygons[1:4], qry@polygons)
@@ -49,13 +51,69 @@ test_that("postgis_insert correctly inserts partial rows", {
 })
 
 
-test_that("postgis_insert fails on bad inputs", {
-    # No geom_name for spatial and vice versa
-    expect_error(postgis_insert(con, country_sp[9:10, ], "cty_tmp"))
-    expect_error(postgis_insert(con, country_sp@data[9:10, ], "cty_tmp",
-                                geom_name = "geom"))
+# Use postgis_update to fill in missing fields in rows 3-4
+#  also add and replace values in row 4 hstore
+country_sp$translations[4] %->% "en" <- "Algeria"
+country_sp$translations[4] %->% "fr" <- "AlgErie"
+postgis_update(con, country_sp[3:4, ], "cty_tmp", id_cols = "iso2",
+               update_cols = c("capital", "population", "translations"),
+               geom_name = "geom", hstore_name = "translations")
+qry <- import_cty_tmp()
+
+test_that("postgis_update works with basic data types", {
+    expect_equal(country_sp[1:4, 1:4], qry[, 1:4])
+})
+
+test_that("postgis_update correctly inserts new hstore", {
+    expect_equal(country_sp$translations[3] %->% "it",
+                 qry$translations[3] %->% "it")
+})
+
+test_that("postgis_update correctly updates existing hstore", {
+    expect_equal(length(country_sp$translations[[4]]), 6)
+    expect_equal(country_sp$translations[4] %->% "en",
+                 qry$translations[4] %->% "en")
+    expect_equal(country_sp$translations[4] %->% "fr",
+                 qry$translations[4] %->% "fr")
 })
 
 
-RPostgreSQL::dbSendQuery(con, "DROP TABLE cty_tmp")
+# Import data with unknown projection
+RPostgreSQL::dbSendQuery(con, paste("CREATE TEMP TABLE cty_tmp2 (name text,",
+                                    "iso2 text PRIMARY KEY, capital text,",
+                    "population integer, translations hstore, geom geometry)"))
+
+country_no_proj <- country_sp
+proj4string(country_no_proj) <- NA_character_
+
+postgis_insert(con, country_no_proj, "cty_tmp2", geom_name = "geom",
+               hstore_name = "translations")
+qry <- get_postgis_query(con, "SELECT iso2, geom FROM cty_tmp2",
+                         geom_name = "geom")
+qry <- qry[order(match(qry$iso2, country_no_proj$iso2)), ]
+
+test_that("postgis_insert works with unknown projection", {
+    expect_equal(country_no_proj@polygons, qry@polygons)
+})
+
+
+test_that("postgis_insert and update fail on bad inputs", {
+    expect_error(postgis_insert(con, country_sp@data[5:6, ], "cty_tmp",
+                                write_cols = "currency"))
+    expect_error(postgis_update(con, country_sp@data, "cty_tmp",
+                                id_cols = "iso2", update_cols = "test"))
+    # No geom_name for spatial and vice versa
+    expect_error(postgis_insert(con, country_sp[7:8, ], "cty_tmp"))
+    expect_error(postgis_insert(con, country_sp@data[9:10, ], "cty_tmp",
+                                geom_name = "geom"))
+    # Unallowed id columns
+    expect_error(postgis_update(con, country_sp@data, "cty_tmp",
+                                id_cols = c("iso2", "name"),
+                                update_cols = c("iso2", "capital")))
+    expect_error(postgis_update(con, country_sp, "cty_tmp", id_cols = "geom",
+                                update_cols = "name", geom_name = "geom"))
+})
+
+
+# Disconnecting deletes TEMP tables
 RPostgreSQL::dbDisconnect(con)
