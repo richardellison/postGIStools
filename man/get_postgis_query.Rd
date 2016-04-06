@@ -24,16 +24,20 @@ Either a data frame (if \code{geom_name = NA}) or a
   i.e. each cell is a named list of key-value pairs.
 }
 \description{
-This function can be used instead of \code{\link[DBI]{dbGetQuery}} when the
-selected columns include a PostgreSQL hstore, which is parsed as a list-column,
-and/or a PostGIS geometry, in which case the output is a spatial data frame
-(from the \code{\link[sp]{sp}} package).
+This function is an extension of \code{\link[DBI]{dbGetQuery}} that is useful
+in cases where selected columns include a PostgreSQL hstore, which is parsed
+as a list-column, and/or a PostGIS geometry, in which case the output is a
+spatial data frame (from the \code{\link[sp]{sp}} package).
 }
 \details{
 Column names must be explicitly listed in the query (i.e. no \code{"SELECT *"})
 and the geometry or hstore column should not be aliased (\code{AS}) or transformed.
 The function issues a warning if a specified \code{geom_name} or
 \code{hstore_name} does not appear in \code{statement}.
+
+Conversion to spatial data frame objects will fail if there are \code{NULL}
+values in the geometry column, so these should be filtered out in the provided
+query statement.
 }
 \examples{
 \dontrun{

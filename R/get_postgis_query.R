@@ -1,14 +1,18 @@
 #' Send SELECT query and parse geometry, hstore columns
 #'
-#' This function can be used instead of \code{\link[DBI]{dbGetQuery}} when the
-#' selected columns include a PostgreSQL hstore, which is parsed as a list-column,
-#' and/or a PostGIS geometry, in which case the output is a spatial data frame
-#' (from the \code{\link[sp]{sp}} package).
+#' This function is an extension of \code{\link[DBI]{dbGetQuery}} that is useful
+#' in cases where selected columns include a PostgreSQL hstore, which is parsed
+#' as a list-column, and/or a PostGIS geometry, in which case the output is a
+#' spatial data frame (from the \code{\link[sp]{sp}} package).
 #'
 #' Column names must be explicitly listed in the query (i.e. no \code{"SELECT *"})
 #' and the geometry or hstore column should not be aliased (\code{AS}) or transformed.
 #' The function issues a warning if a specified \code{geom_name} or
 #' \code{hstore_name} does not appear in \code{statement}.
+#'
+#' Conversion to spatial data frame objects will fail if there are \code{NULL}
+#' values in the geometry column, so these should be filtered out in the provided
+#' query statement.
 #'
 #' @param conn A \code{\link[RPostgreSQL]{PostgreSQLConnection-class}} object,
 #'   such as the output of \code{\link[DBI]{dbConnect}}.
@@ -107,6 +111,7 @@ process_select_result <- function(res, geom_name, hstore_name) {
     # Convert hstore (now JSON) column into list of lists
     if (!is.na(hstore_name)) {
         hs <- paste0(hstore_name, "_json")
+        res[is.na(res[[hs]]), hs] <- "{}" # Replace SQL NULLs with empty lists
         res[[hstore_name]] <- lapply(as.character(res[[hs]]), jsonlite::fromJSON)
         res[[hs]] <- NULL
     }

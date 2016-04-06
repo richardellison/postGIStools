@@ -124,8 +124,10 @@ prep_write_query <- function(conn, df, tbl, mode, write_cols, id_cols,
                              collapse = ", ")))
         }
         srid <- find_srid(conn, proj4string(df))
-        df <- cbind(df@data[, write_cols, drop = FALSE],
-                    rgeos::writeWKT(df, byid = TRUE), stringsAsFactors = FALSE)
+        # Note that writeWKT(..., byid = TRUE) behaves differently if only 1 row
+        geom_wkt <- rgeos::writeWKT(df, byid = nrow(df@data) > 1)
+        df <- cbind(df@data[, write_cols, drop = FALSE], geom_wkt,
+                    stringsAsFactors = FALSE)
         igeom <- ncol(df)
         colnames(df)[igeom] <- geom_name
     } else {
