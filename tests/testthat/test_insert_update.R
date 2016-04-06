@@ -30,7 +30,8 @@ postgis_insert(con, country_sp[1:2, ], "cty_tmp",
 qry <- import_cty_tmp()
 
 test_that("postgis_insert correctly inserts full rows", {
-    expect_equal(country_sp[1:2, -5], qry[, -5])
+    expect_equal(country_sp@polygons[1:2], qry@polygons)
+    expect_equal(country_sp@data[1:2, -5], qry@data[, -5])
     expect_equal(country_sp$translations[1:2] %->% "it",
                  qry$translations %->% "it")
 })
@@ -61,7 +62,7 @@ postgis_update(con, country_sp[3:4, ], "cty_tmp", id_cols = "iso2",
 qry <- import_cty_tmp()
 
 test_that("postgis_update works with basic data types", {
-    expect_equal(country_sp[1:4, 1:4], qry[, 1:4])
+    expect_equal(country_sp@data[1:4, 1:4], qry@data[, 1:4])
 })
 
 test_that("postgis_update correctly inserts new hstore", {
