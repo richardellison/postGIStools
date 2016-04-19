@@ -17,8 +17,10 @@
 #' from a single row in \code{df}. Neither the geometry nor the hstore column can be
 #' used in \code{id_cols}.
 #'
-#' Note that hstore columns are updated by \emph{concatenation}, i.e. new keys are
-#' added, values associated with existing keys are updated, no keys are deleted.
+#' Note that if \code{hstore_concat = TRUE} (the default), hstore columns are updated
+#' by \emph{concatenation}, i.e. new keys are added, values associated with
+#' existing keys are updated, no keys are deleted. To overwrite whole hstore
+#' "cells", potentially deleting keys absent in \code{df}, set \code{hstore_concat = FALSE}.
 #'
 #' @param conn A \code{\link[RPostgreSQL]{PostgreSQLConnection-class}} object,
 #'   such as the output of \code{\link[DBI]{dbConnect}}.
@@ -63,7 +65,7 @@ postgis_insert <- function(conn, df, tbl, write_cols = NA,
                            geom_name = NA_character_,
                            hstore_name = NA_character_) {
     query_text <- prep_write_query(conn, df, tbl, mode = "insert", write_cols,
-                                   NA, NA, geom_name, hstore_name)
+                                   NA, NA, geom_name, hstore_name, NA)
     RPostgreSQL::dbSendQuery(conn, query_text)
 }
 
@@ -72,13 +74,15 @@ postgis_insert <- function(conn, df, tbl, write_cols = NA,
 #'   used to match records between \code{df} and the database table.
 #' @param update_cols A character vector, corresponding to the columns that
 #'   must be updated in the database table based on values in \code{df}.
+#' @param hstore_concat If TRUE, hstore columns are updated by concatenation.
+#'
 #' @rdname postgis_insert_update
 #' @export
 postgis_update <- function(conn, df, tbl, id_cols, update_cols,
-                            geom_name = NA_character_,
-                            hstore_name = NA_character_) {
+                           geom_name = NA_character_,
+                           hstore_name = NA_character_, hstore_concat = TRUE) {
     query_text <- prep_write_query(conn, df, tbl, mode = "update", NA, id_cols,
-                                   update_cols, geom_name, hstore_name)
+                             update_cols, geom_name, hstore_name, hstore_concat)
     RPostgreSQL::dbSendQuery(conn, query_text)
 }
 
@@ -86,7 +90,7 @@ postgis_update <- function(conn, df, tbl, id_cols, update_cols,
 # Function to build query string for INSERT or UPDATE query (based on "mode")
 #  (not exported)
 prep_write_query <- function(conn, df, tbl, mode, write_cols, id_cols,
-                             update_cols, geom_name, hstore_name) {
+                           update_cols, geom_name, hstore_name, hstore_concat) {
     # Check inputs
     if (!is(conn, "PostgreSQLConnection")) {
         stop("conn is not a valid PostgreSQL connection")
@@ -159,7 +163,6 @@ prep_write_query <- function(conn, df, tbl, mode, write_cols, id_cols,
             stop("id_cols do not uniquely identify rows in df")
     }
 
-
     # Convert hstore column (if present) to JSON text, then hstore text
     if (!is.na(hstore_name)) {
         if (!all(vapply(df[[hstore_name]], is.list, FALSE))) {
@@ -174,15 +177,18 @@ prep_write_query <- function(conn, df, tbl, mode, write_cols, id_cols,
     if (mode == "update") {
         tbl_q <- quote_id(tbl)
         tbl_tmp <- quote_id(paste0(tbl, "_tmp"))
-        update_q <- quote_id(update_cols)
-        # hstore updated by concatenation (||), with COALESCE in case of NULLs
-        update_tmp <- ifelse(!is.na(hstore_name) & update_cols == hstore_name,
-                             paste0("COALESCE(", tbl_q, ".", update_q,
-                                    ", hstore('')) || ",
-                                    tbl_tmp, ".", update_q, "::hstore"),
-                             paste0(tbl_tmp, ".", update_q))
         id_q <- quote_id(id_cols)
-
+        update_q <- quote_id(update_cols)
+        update_tmp <- paste0(tbl_tmp, ".", update_q)
+        if (!is.na(hstore_name)) {
+            i_hs <- which(update_cols == hstore_name)
+            update_tmp[i_hs] <- paste0(update_tmp[i_hs], "::hstore")
+            if (hstore_concat) {
+                # hstore updated by concatenation (||), with COALESCE in case of NULLs
+                update_tmp[i_hs] <- paste0("COALESCE(", tbl_q, ".", update_q[i_hs],
+                                           ", hstore('')) || ", update_tmp[i_hs])
+            }
+        }
         query_text <- paste("UPDATE", tbl_q, "SET",
                             paste(update_q, "=", update_tmp, collapse = ", "),
                             "FROM (VALUES")

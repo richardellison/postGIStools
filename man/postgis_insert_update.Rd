@@ -9,7 +9,7 @@ postgis_insert(conn, df, tbl, write_cols = NA, geom_name = NA_character_,
   hstore_name = NA_character_)
 
 postgis_update(conn, df, tbl, id_cols, update_cols, geom_name = NA_character_,
-  hstore_name = NA_character_)
+  hstore_name = NA_character_, hstore_concat = TRUE)
 }
 \arguments{
 \item{conn}{A \code{\link[RPostgreSQL]{PostgreSQLConnection-class}} object,
@@ -34,6 +34,8 @@ used to match records between \code{df} and the database table.}
 
 \item{update_cols}{A character vector, corresponding to the columns that
 must be updated in the database table based on values in \code{df}.}
+
+\item{hstore_concat}{If TRUE, hstore columns are updated by concatenation.}
 }
 \value{
 The result of \code{\link[DBI]{dbSendQuery}}.
@@ -57,8 +59,10 @@ be duplicated in the database table, in which case multiple rows are updated
 from a single row in \code{df}. Neither the geometry nor the hstore column can be
 used in \code{id_cols}.
 
-Note that hstore columns are updated by \emph{concatenation}, i.e. new keys are
-added, values associated with existing keys are updated, no keys are deleted.
+Note that if \code{hstore_concat = TRUE} (the default), hstore columns are updated
+by \emph{concatenation}, i.e. new keys are added, values associated with
+existing keys are updated, no keys are deleted. To overwrite whole hstore
+"cells", potentially deleting keys absent in \code{df}, set \code{hstore_concat = FALSE}.
 }
 \examples{
 \dontrun{

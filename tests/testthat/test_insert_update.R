@@ -53,9 +53,10 @@ test_that("postgis_insert correctly inserts partial rows", {
 
 
 # Use postgis_update to fill in missing fields in rows 3-4
-#  also add and replace values in row 4 hstore
+#  also add, delete and replace values in row 4 hstore
 country_sp$translations[4] %->% "en" <- "Algeria"
 country_sp$translations[4] %->% "fr" <- "AlgErie"
+country_sp$translations[4] %->% "it" <- NULL
 postgis_update(con, country_sp[3:4, ], "cty_tmp", id_cols = "iso2",
                update_cols = c("capital", "population", "translations"),
                geom_name = "geom", hstore_name = "translations")
@@ -71,11 +72,20 @@ test_that("postgis_update correctly inserts new hstore", {
 })
 
 test_that("postgis_update correctly updates existing hstore", {
-    expect_equal(length(country_sp$translations[[4]]), 6)
+    expect_equal(length(qry$translations[[4]]), 6)
     expect_equal(country_sp$translations[4] %->% "en",
                  qry$translations[4] %->% "en")
     expect_equal(country_sp$translations[4] %->% "fr",
                  qry$translations[4] %->% "fr")
+})
+
+postgis_update(con, country_sp[4, ], "cty_tmp", id_cols = "iso2",
+               update_cols = "translations", geom_name = "geom",
+               hstore_name = "translations", hstore_concat = FALSE)
+qry <- import_cty_tmp()
+
+test_that("postgis_update deletes key if hstore_concat is FALSE", {
+    expect_true(is.na(qry$translations[4] %->% "it"))
 })
 
 
