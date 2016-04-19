@@ -115,7 +115,7 @@ cty_tmp <- get_postgis_query(con, paste("SELECT name, iso2, capital,",
 head(cty_tmp@data)
 ```
 
-In the current version, hstore columns are updated by concatenation: keys present in the input data frame but not the original table are added to the hstore, keys present in both the data frame and table have their associated values updated, but keys absent from the input data frame are _not_ deleted from the table.
+By default, hstore columns are updated by concatenation: keys present in the input data frame but not the original table are added to the hstore, keys present in both the data frame and table have their associated values updated, but keys absent from the input data frame are _not_ deleted from the table. This can be changed by setting `hstore_concat = FALSE`, in which case whole hstore cells are replaced with corresponding ones in the input data frame.
 
 ```{r update_hstore}
 countries$translations[2] %->% "nl" <- NULL
@@ -128,5 +128,15 @@ postgis_update(con, countries[1:10,], "cty_tmp", id_cols = "iso2",
 cty_tmp <- get_postgis_query(con, paste("SELECT name, iso2, capital,",
                                         "geom, translations FROM cty_tmp"),
                              geom_name = "geom", hstore_name = "translations")
-head(cty_tmp@data)
+cty_tmp@data[cty_tmp$iso2 %in% c("AL", "DZ"), ]
+
+# Key deletion not reflected in database unless hstore_concat = FALSE
+postgis_update(con, countries[1:10,], "cty_tmp", id_cols = "iso2", 
+               update_cols = "translations", geom_name = "geom", 
+               hstore_name = "translations", hstore_concat = FALSE)
+
+cty_tmp <- get_postgis_query(con, paste("SELECT name, iso2, capital,",
+                                        "geom, translations FROM cty_tmp"),
+                             geom_name = "geom", hstore_name = "translations")
+cty_tmp@data[cty_tmp$iso2 %in% c("AL", "DZ"), ]
 ```
