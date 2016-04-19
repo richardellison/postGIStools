@@ -29,3 +29,7 @@ devtools::install_github("SESYNC-ci/postGIStools")
 
 The code to import geom fields is based on blog post from Lee Hachadoorian:
 [Load PostGIS geometries in R without rgdal](http://www.r-bloggers.com/load-postgis-geometries-in-r-without-rgdal/)
+
+## Acknowledgements ##
+
+Development of this R package was supported by the National Socio-Environmental Synthesis Center (SESYNC) under funding received from the National Science Foundation DBI-1052875.
