@@ -2,15 +2,17 @@ library(postGIStools)
 context("get_postgis_query")
 
 # Connect to test database
-con <- RPostgreSQL::dbConnect(RPostgreSQL::PostgreSQL(),
-                              dbname = "d2u06to89nuqei", user = "mzcwtmyzmgalae",
-                              host = "ec2-107-22-246-250.compute-1.amazonaws.com",
-                              password = "UTv2BuwJUPuruhDqJthcngyyvO")
+con <- tryCatch(RPostgreSQL::dbConnect(RPostgreSQL::PostgreSQL(),
+                             dbname = "d2u06to89nuqei", user = "mzcwtmyzmgalae",
+                             host = "ec2-107-22-246-250.compute-1.amazonaws.com",
+                             password = "UTv2BuwJUPuruhDqJthcngyyvO"),
+                error = function(e) NULL)
 
 # Projection used in data
 proj_wgs84 <- "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"
 
 test_that("get_postgis_query works for simple queries", {
+    if (is.null(con)) skip("PostgreSQL connection unavailable")
     qry <- get_postgis_query(con,
         "select name, capital, population from country where iso2 = 'CA'")
     resp <- data.frame(name = "Canada", capital = "Ottawa",
@@ -20,6 +22,7 @@ test_that("get_postgis_query works for simple queries", {
 
 
 test_that("get_postgis_query correctly imports hstore", {
+    if (is.null(con)) skip("PostgreSQL connection unavailable")
     qry <- get_postgis_query(con,
         "SELECT name, translations FROM country WHERE iso2 = 'BR'",
         hstore_name = "translations")
@@ -33,6 +36,7 @@ test_that("get_postgis_query correctly imports hstore", {
 
 
 test_that("get_postgis_query correctly imports geometry", {
+    if (is.null(con)) skip("PostgreSQL connection unavailable")
     qry <- get_postgis_query(con,
         "SELECT name, geom FROM country WHERE iso2 IN ('KE', 'TZ')",
         geom_name = "geom")
@@ -51,10 +55,11 @@ test_that("get_postgis_query correctly imports geometry", {
 
 
 test_that("get_postgis_query fails on bad inputs", {
+    if (is.null(con)) skip("PostgreSQL connection unavailable")
     expect_error(get_postgis_query(0, "SELECT * FROM country"))
     expect_error(get_postgis_query(con, "CREATE TABLE tab_tmp (test text)"))
     expect_error(get_postgis_query(con, "SELECT * FROM country", geom_name = 0))
 })
 
 
-RPostgreSQL::dbDisconnect(con)
+if (!is.null(con)) RPostgreSQL::dbDisconnect(con)

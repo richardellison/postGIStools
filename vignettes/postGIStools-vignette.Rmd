@@ -8,7 +8,10 @@ vignette: >
 ---
 
 ```{r echo=FALSE}
-knitr::opts_chunk$set(warning=FALSE, message=FALSE, collapse=TRUE)
+# Don't run this vignette on CRAN
+NOT_CRAN <- identical(tolower(Sys.getenv("NOT_CRAN")), "true")
+knitr::opts_chunk$set(purl = NOT_CRAN, eval = NOT_CRAN)
+knitr::opts_chunk$set(warning=FALSE, message=FALSE, collapse=TRUE, comment = "#>")
 ```
 
 The postGIStools package extends the standard R / PostgreSQL interface (as implemented in RPostgreSQL) to provide support for two popular PostgreSQL extensions: _PostGIS_ (spatial data) and _hstore_ (key/value pairs). 
