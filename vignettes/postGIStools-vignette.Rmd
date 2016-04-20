@@ -33,6 +33,8 @@ We demonstrate the postGIStools functions using a test database hosted on Heroku
 
 The data originates from the [REST Countries API](https://restcountries.eu/), whereas the country geometries are from the _wrld\_simpl_ map included in maptools R package.
 
+_Note: Currently, the test database cannot be accessed from a Windows or Mac OS X environment, due the lack of SSL support (which is required by Heroku) in those versions of RPostgreSQL._
+
 To read data from PostgreSQL into R, postGIStools provides the `get_postgis_query` function. Like the `dbGetQuery` function in PostgreSQL, it requires a connection object and a SQL statement, which in this case must be a SELECT statement. In addition, the user may indentify a geometry and/or hstore field by name. Note that since the geometry and hstore field names must be found in the query statement, wildcards ("SELECT *") cannot be used.
 
 ```{r get_postgis_query}
