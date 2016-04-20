@@ -1,6 +1,6 @@
 Package: postGIStools
 Type: Package
-Title: Tools for Interacting with PostgreSQL / PostGIS Databases
+Title: Tools for Interacting with 'PostgreSQL' / 'PostGIS' Databases
 Version: 0.1.0
 Depends:
     R (>= 3.2.3),
@@ -8,15 +8,16 @@ Depends:
 Imports:
     DBI (>= 0.3),
     jsonlite (>= 0.9),
+    methods,
     rgdal (>= 0.8),
     rgeos (>= 0.3),
     RPostgreSQL (>= 0.4),
     stringr (>= 1.0)
 Authors@R: person('Philippe', 'Marchand', email = 'pmarchand@sesync.org',
                   role = c('aut', 'cre'))
-Description: This package includes functions to convert geometry and hstore
-    data types from PostgreSQL into standard R objects, as well as to simplify
-    the import of R data frames (including spatial data frames) into PostgreSQL.
+Description: Functions to convert geometry and 'hstore' data types from
+    'PostgreSQL' into standard R objects, as well as to simplify
+    the import of R data frames (including spatial data frames) into 'PostgreSQL'.
 License: GPL-3
 LazyData: TRUE
 RoxygenNote: 5.0.1

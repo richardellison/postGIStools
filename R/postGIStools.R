@@ -23,4 +23,5 @@
 #' @aliases postGIStools
 #'
 #' @import sp
+#' @importFrom methods is
 NULL
