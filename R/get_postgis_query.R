@@ -73,20 +73,21 @@ edit_select_query <- function(conn, statement, geom_name, hstore_name) {
     # Convert geom field to WKT text format
     #  and join with spatial_ref_sys for projection information
     new_query <- statement
+    geom_select <- ''
+    geom_join <- ''
+    hstore_select <- ''
     if (!is.na(geom_name)) {
         if (!grepl(geom_name, new_query, fixed = TRUE)) {
             warning(paste("geom. field", geom_name,
                           "absent from query statement."))
             geom_name <- NA
         } else {
-            geom_sub <- paste0("ST_AsText(", quote_id(geom_name), ") AS ",
-                               quote_id(paste0(geom_name, "_wkt")), ", ",
-                               "ST_SRID(", quote_id(geom_name), ") AS ",
-                               quote_id(paste0(geom_name, "_srid")))
-            new_query <- gsub(geom_name, geom_sub, new_query, fixed = TRUE)
-            new_query <- paste0("SELECT * FROM (", new_query, ") AS base_qry ",
-                                "LEFT JOIN spatial_ref_sys ON ",
-                                quote_id(paste0(geom_name, "_srid")), " = srid")
+            geom_select <- paste0("ST_AsText(", quote_id(geom_name), ") AS ",
+                                  quote_id(paste0(geom_name, "_wkt")), ", ",
+                                  "ST_SRID(", quote_id(geom_name), ") AS ",
+                                  quote_id(paste0(geom_name, "_srid")))
+            geom_join <- paste0("LEFT JOIN spatial_ref_sys ON ",
+                                "ST_SRID(", quote_id(geom_name), ")", " = srid")
         }
     }
 
@@ -97,11 +98,21 @@ edit_select_query <- function(conn, statement, geom_name, hstore_name) {
                           "absent from query statement."))
             hstore_name <- NA
         } else {
-            hstore_sub <- paste0("hstore_to_json(", quote_id(hstore_name),
-                                 ") AS ", quote_id(paste0(hstore_name, "_json")))
-            new_query <- gsub(hstore_name, hstore_sub, new_query, fixed = TRUE)
+#             hstore_sub <- paste0("hstore_to_json(", quote_id(hstore_name),
+#                                  ") AS ", quote_id(paste0(hstore_name, "_json")))
+#             new_query <- gsub(hstore_name, hstore_sub, new_query, fixed = TRUE)
+            hstore_select <- paste0("hstore_to_json(", quote_id(hstore_name),
+                                    ") AS ", quote_id(paste0(hstore_name, "_json")))
         }
     }
+    new_query <- paste0(
+    "SELECT *",
+    ifelse(is.na(geom_name) == TRUE, "", paste0(",",geom_select)),
+    ifelse(is.na(hstore_name) == TRUE, "", paste0(",",hstore_select)),
+    " FROM (", new_query, ") baseqry",
+    ifelse(is.na(geom_name) == TRUE, "", paste0(" ",geom_join)),
+    ";"
+    )
 
     new_query
 }
@@ -122,19 +133,35 @@ process_select_result <- function(res, geom_name, hstore_name) {
             stop("Returned geometries do not share the same projection.")
         proj <- unique(res$proj4text)
         geom_wkt <- paste0(geom_name, "_wkt")
-        sp_obj <- do.call(rbind, Map(rgeos::readWKT, text = res[[geom_wkt]],
-                                     id = 1:nrow(res), USE.NAMES = FALSE))
-        proj4string(sp_obj) <- CRS(proj)
+
+        # Check spatial datatype
+        sp_obj <- rgeos::readWKT(text = res[1,geom_wkt], id=1)
         # Spatial columns to be discarded
-        sp_cols <- c(geom_wkt, paste0(geom_name, "_srid"), "srid", "auth_name",
+        sp_cols <- c(geom_wkt, geom_name, paste0(geom_name, "_srid"), "srid", "auth_name",
                      "auth_srid", "srtext", "proj4text")
         dat <- res[!(names(res) %in% sp_cols)]
         if (is(sp_obj, "SpatialPoints")) {
-            res <- SpatialPointsDataFrame(sp_obj, dat)
+            res <- SpatialPointsDataFrame(
+                coords = matrix(as.numeric(as.character(unlist(strsplit(gsub("POINT\\(|)","",res[,geom_wkt])," ")))),ncol=2,byrow=TRUE),
+                data = dat,
+                proj4string = CRS(proj)
+            )
         } else if (is(sp_obj, "SpatialLines")) {
-            res <- SpatialLinesDataFrame(sp_obj, dat)
+            res <- SpatialLinesDataFrame(
+                SpatialLines(
+                    lapply(1:nrow(res),function(x,res){(rgeos::readWKT(res[x,geom_wkt],id=x))@lines[[1]]},res),
+                    proj4string = CRS(proj)
+                ),
+                dat
+            )
         } else if (is(sp_obj, "SpatialPolygons")) {
-            res <- SpatialPolygonsDataFrame(sp_obj, dat)
+            res <- SpatialPolygonsDataFrame(
+                SpatialPolygons(
+                    lapply(1:nrow(res),function(x,res){(rgeos::readWKT(res[x,geom_wkt],id=x))@polygons[[1]]},res),
+                    proj4string = CRS(proj)
+                ),
+                dat
+            )
         } else {
             stop("geom. field cannot be mapped to Point, Line or Polygon type.")
         }
