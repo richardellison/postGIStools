@@ -5,11 +5,6 @@
 #' as a list-column, and/or a PostGIS geometry, in which case the output is a
 #' spatial data frame (from the \code{\link[sp]{sp}} package).
 #'
-#' Column names must be explicitly listed in the query (i.e. no \code{"SELECT *"})
-#' and the geometry or hstore column should not be aliased (\code{AS}) or transformed.
-#' The function issues a warning if a specified \code{geom_name} or
-#' \code{hstore_name} does not appear in \code{statement}.
-#'
 #' Conversion to spatial data frame objects will fail if there are \code{NULL}
 #' values in the geometry column, so these should be filtered out in the provided
 #' query statement.
@@ -72,46 +67,34 @@ edit_select_query <- function(conn, statement, geom_name, hstore_name) {
 
     # Convert geom field to WKT text format
     #  and join with spatial_ref_sys for projection information
-    new_query <- statement
-    geom_select <- ''
-    geom_join <- ''
-    hstore_select <- ''
     if (!is.na(geom_name)) {
-        if (!grepl(geom_name, new_query, fixed = TRUE)) {
-            warning(paste("geom. field", geom_name,
-                          "absent from query statement."))
-            geom_name <- NA
-        } else {
-            geom_select <- paste0("ST_AsText(", quote_id(geom_name), ") AS ",
-                                  quote_id(paste0(geom_name, "_wkt")), ", ",
-                                  "ST_SRID(", quote_id(geom_name), ") AS ",
-                                  quote_id(paste0(geom_name, "_srid")))
-            geom_join <- paste0("LEFT JOIN spatial_ref_sys ON ",
-                                "ST_SRID(", quote_id(geom_name), ")", " = srid")
-        }
+        geom_select <- paste0("ST_AsText(", quote_id(geom_name), ") AS ",
+                              quote_id(paste0(geom_name, "_wkt")), ", ",
+                              "ST_SRID(", quote_id(geom_name), ") AS ",
+                              quote_id(paste0(geom_name, "_srid")))
+        geom_join <- paste0("LEFT JOIN spatial_ref_sys ON ",
+                            "ST_SRID(", quote_id(geom_name), ")", " = srid")
+    } else {
+        geom_select <- ""
+        geom_join <- ""
     }
 
-    # Add conversion of hstore field to JSON
+    # Convert hstore field to JSON
     if (!is.na(hstore_name)) {
-        if (!grepl(hstore_name, new_query, fixed = TRUE)) {
-            warning(paste("hstore field", hstore_name,
-                          "absent from query statement."))
-            hstore_name <- NA
-        } else {
-#             hstore_sub <- paste0("hstore_to_json(", quote_id(hstore_name),
-#                                  ") AS ", quote_id(paste0(hstore_name, "_json")))
-#             new_query <- gsub(hstore_name, hstore_sub, new_query, fixed = TRUE)
-            hstore_select <- paste0("hstore_to_json(", quote_id(hstore_name),
-                                    ") AS ", quote_id(paste0(hstore_name, "_json")))
-        }
+        hstore_select <- paste0("hstore_to_json(", quote_id(hstore_name),
+                                ") AS ", quote_id(paste0(hstore_name, "_json")))
+    } else {
+        hstore_select <- ""
     }
+
+    # Add transformed fields to base query
     new_query <- paste0(
-    "SELECT *",
-    ifelse(is.na(geom_name) == TRUE, "", paste0(",",geom_select)),
-    ifelse(is.na(hstore_name) == TRUE, "", paste0(",",hstore_select)),
-    " FROM (", new_query, ") baseqry",
-    ifelse(is.na(geom_name) == TRUE, "", paste0(" ",geom_join)),
-    ";"
+        "SELECT *",
+        ifelse(is.na(geom_name), "", paste0(",", geom_select)),
+        ifelse(is.na(hstore_name), "", paste0(",", hstore_select)),
+        " FROM (", statement, ") baseqry",
+        ifelse(is.na(geom_name), "", paste0(" ", geom_join)),
+        ";"
     )
 
     new_query
@@ -135,32 +118,34 @@ process_select_result <- function(res, geom_name, hstore_name) {
         geom_wkt <- paste0(geom_name, "_wkt")
 
         # Check spatial datatype
-        sp_obj <- rgeos::readWKT(text = res[1,geom_wkt], id=1)
+        sp_obj <- rgeos::readWKT(text = res[1, geom_wkt])
         # Spatial columns to be discarded
-        sp_cols <- c(geom_wkt, geom_name, paste0(geom_name, "_srid"), "srid", "auth_name",
-                     "auth_srid", "srtext", "proj4text")
+        sp_cols <- c(geom_wkt, geom_name, paste0(geom_name, "_srid"), "srid",
+                     "auth_name", "auth_srid", "srtext", "proj4text")
         dat <- res[!(names(res) %in% sp_cols)]
         if (is(sp_obj, "SpatialPoints")) {
             res <- SpatialPointsDataFrame(
-                coords = matrix(as.numeric(as.character(unlist(strsplit(gsub("POINT\\(|)","",res[,geom_wkt])," ")))),ncol=2,byrow=TRUE),
+                coords = matrix(as.numeric(as.character(unlist(
+                        strsplit(gsub("POINT\\(|)", "",res[, geom_wkt]), " ")
+                    ))), ncol=2, byrow=TRUE),
                 data = dat,
                 proj4string = CRS(proj)
             )
         } else if (is(sp_obj, "SpatialLines")) {
             res <- SpatialLinesDataFrame(
                 SpatialLines(
-                    lapply(1:nrow(res),function(x,res){(rgeos::readWKT(res[x,geom_wkt],id=x))@lines[[1]]},res),
-                    proj4string = CRS(proj)
-                ),
-                dat
+                    lapply(1:nrow(res), function(i) {
+                        (rgeos::readWKT(res[i, geom_wkt], id = i))@lines[[1]]
+                    }), proj4string = CRS(proj)
+                ), dat
             )
         } else if (is(sp_obj, "SpatialPolygons")) {
             res <- SpatialPolygonsDataFrame(
                 SpatialPolygons(
-                    lapply(1:nrow(res),function(x,res){(rgeos::readWKT(res[x,geom_wkt],id=x))@polygons[[1]]},res),
-                    proj4string = CRS(proj)
-                ),
-                dat
+                    lapply(1:nrow(res), function(i) {
+                        (rgeos::readWKT(res[i, geom_wkt],id = i))@polygons[[1]]
+                    }), proj4string = CRS(proj)
+                ), dat
             )
         } else {
             stop("geom. field cannot be mapped to Point, Line or Polygon type.")
