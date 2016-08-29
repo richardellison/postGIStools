@@ -69,7 +69,7 @@ We demonstrate the postGIStools functions using a test database hosted on Heroku
 
 The data originates from the [REST Countries API](https://restcountries.eu/), whereas the country geometries are from the *wrld\_simpl* map included in maptools R package.
 
-To read data from PostgreSQL into R, postGIStools provides the `get_postgis_query` function. Like the `dbGetQuery` function in PostgreSQL, it requires a connection object and a SQL statement, which in this case must be a SELECT statement. In addition, the user may indentify a geometry and/or hstore field by name. Note that since the geometry and hstore field names must be found in the query statement, wildcards ("SELECT \*") cannot be used.
+To read data from PostgreSQL into R, postGIStools provides the `get_postgis_query` function. Like the `dbGetQuery` function in PostgreSQL, it requires a connection object and a SQL statement, which in this case must be a SELECT statement. In addition, the user may identify a geometry and/or hstore field by name.
 
 ``` r
 library(RPostgreSQL)
@@ -79,8 +79,7 @@ con <- dbConnect(PostgreSQL(), dbname = "d2u06to89nuqei", user = "mzcwtmyzmgalae
                  host = "ec2-107-22-246-250.compute-1.amazonaws.com",
                  password = "UTv2BuwJUPuruhDqJthcngyyvO")
 
-countries <- get_postgis_query(con, "SELECT name, iso2, capital, population,
-                               translations, geom FROM country 
+countries <- get_postgis_query(con, "SELECT * FROM country 
                                WHERE population > 1000000",
                                geom_name = "geom", hstore_name = "translations")
 
@@ -113,6 +112,23 @@ str(countries@data[1:2,])
 ##   .. ..$ it: chr "Albania"
 ##   .. ..$ ja: chr "アルバニア"
 ```
+
+The query statement can include the output of PostGIS spatial functions. In that case, it is simpler to set an alias for the output column and pass that alias as the `geom_name`. For example, the following query returns a *SpatialPointsDataFrame* of the country centroids.
+
+```r
+centroids <- get_postgis_query(con, 
+                        "SELECT name, ST_Centroid(geom) centr FROM country",
+                        geom_name = "centr")
+head(centroids)
+##              coordinates           name
+## 1   (66.00111, 33.85878)    Afghanistan
+## 2   (19.97356, 60.20129)  Åland Islands
+## 3   (20.07437, 41.13255)        Albania
+## 4   (2.627813, 28.17211)        Algeria
+## 5 (-169.8823, -14.25412) American Samoa
+## 6   (1.650388, 42.56045)        Andorra
+```
+
 
 Working with hstore columns
 ---------------------------
