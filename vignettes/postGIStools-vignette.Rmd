@@ -35,7 +35,7 @@ The data originates from the [REST Countries API](https://restcountries.eu/), wh
 
 _Note: Currently, the test database cannot be accessed from a Windows or Mac OS X environment, due the lack of SSL support (which is required by Heroku) in those versions of RPostgreSQL._
 
-To read data from PostgreSQL into R, postGIStools provides the `get_postgis_query` function. Like the `dbGetQuery` function in PostgreSQL, it requires a connection object and a SQL statement, which in this case must be a SELECT statement. In addition, the user may indentify a geometry and/or hstore field by name. Note that since the geometry and hstore field names must be found in the query statement, wildcards ("SELECT *") cannot be used.
+To read data from PostgreSQL into R, postGIStools provides the `get_postgis_query` function. Like the `dbGetQuery` function in PostgreSQL, it requires a connection object and a SQL statement, which in this case must be a SELECT statement. In addition, the user may identify a geometry and/or hstore field by name.
 
 ```{r get_postgis_query}
 library(RPostgreSQL)
@@ -45,8 +45,7 @@ con <- dbConnect(PostgreSQL(), dbname = "d2u06to89nuqei", user = "mzcwtmyzmgalae
                  host = "ec2-107-22-246-250.compute-1.amazonaws.com",
                  password = "UTv2BuwJUPuruhDqJthcngyyvO")
 
-countries <- get_postgis_query(con, "SELECT name, iso2, capital, population,
-                               translations, geom FROM country 
+countries <- get_postgis_query(con, "SELECT * FROM country 
                                WHERE population > 1000000",
                                geom_name = "geom", hstore_name = "translations")
 
@@ -57,6 +56,15 @@ When a geometry column is specified, the query output is a spatial data frame ty
 
 ```{r data_str}
 str(countries@data[1:2,])
+```
+
+The query statement can include the output of PostGIS spatial functions. In that case, it is simpler to set an alias for the output column and pass that alias as the `geom_name`. For example, the following query returns a _SpatialPointsDataFrame_ of the country centroids.
+
+```{r get_query_centr}
+centroids <- get_postgis_query(con, 
+                        "SELECT name, ST_Centroid(geom) centr FROM country",
+                        geom_name = "centr")
+head(centroids)
 ```
 
 
