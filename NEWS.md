@@ -1,3 +1,10 @@
+postGIStools 0.2.1
+==================
+
+* Fixed bug that caused an error when trying to insert/update data with
+a single factor column. (#6)
+
+
 postGIStools 0.2.0
 ==================
 

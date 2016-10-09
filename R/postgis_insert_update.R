@@ -150,7 +150,7 @@ prep_write_query <- function(conn, df, tbl, mode, write_cols, id_cols,
 
     # Convert any factor columns to characters
     fact_cols <- vapply(df, is.factor, FALSE)
-    df[, fact_cols] <- lapply(df[, fact_cols], as.character)
+    df[fact_cols] <- lapply(df[fact_cols], as.character)
 
     # If mode == update, check that no id_cols or update_cols are missing
     #   and that id_cols uniquely identify records

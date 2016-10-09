@@ -70,7 +70,6 @@ if (!is.null(con)) {
                    update_cols = c("capital", "population", "translations"),
                    geom_name = "geom", hstore_name = "translations")
     qry <- import_cty_tmp()
-
 }
 
 test_that("postgis_update works with basic data types", {
@@ -104,6 +103,34 @@ if (!is.null(con)) {
 test_that("postgis_update deletes key if hstore_concat is FALSE", {
     if (is.null(con)) skip("PostgreSQL connection unavailable")
     expect_true(is.na(qry$translations[4] %->% "it"))
+})
+
+
+if (!is.null(con)) {
+    # Try insert/update with one or more factors
+    country_fact <- country_sp
+    for (col in c("name", "iso2", "capital")) {
+        country_fact[[col]] <- as.factor(country_fact[[col]])
+    }
+    postgis_insert(con, country_fact[5:6, ], "cty_tmp",
+                   write_cols = c("name", "iso2", "population", "translations"),
+                   geom_name = "geom", hstore_name = "translations")
+    postgis_insert(con, country_fact[7:8, ], "cty_tmp",
+                   write_cols = c("iso2", "population", "translations"),
+                   geom_name = "geom", hstore_name = "translations")
+    postgis_update(con, country_fact[5:6, ], "cty_tmp", id_cols = "iso2",
+                   update_cols = "capital",
+                   geom_name = "geom", hstore_name = "translations")
+    postgis_update(con, country_fact[7:8, ], "cty_tmp", id_cols = "iso2",
+                   update_cols = c("name", "capital"),
+                   geom_name = "geom", hstore_name = "translations")
+    qry <- import_cty_tmp()
+}
+
+test_that("insert/update works from factor columns", {
+    if (is.null(con)) skip("PostgreSQL connection unavailable")
+    expect_equal(country_sp@data[5:8, 1:4], qry@data[5:8, 1:4],
+                 check.attributes = FALSE)
 })
 
 
