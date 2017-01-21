@@ -9,11 +9,14 @@
 #' values in the geometry column, so these should be filtered out in the provided
 #' query statement.
 #'
-#' @param conn A \code{\link[RPostgreSQL]{PostgreSQLConnection-class}} object,
+#' @param conn A \code{\link[RPostgreSQL]{PostgreSQLConnection-class}} or
+#' \code{\link[RSQLite]{SQLiteConnection-class}} object,
 #'   such as the output of \code{\link[DBI]{dbConnect}}.
 #' @param statement Character string for a SQL SELECT query.
 #' @param geom_name Name of the geometry column (\code{NA} if none).
 #' @param hstore_name Name of the hstore column (\code{NA} if none).
+#' @param mod_spatialite Shared library containing the spatialite extension if
+#' conn is a SQLiteConnection.
 #' @return Either a data frame (if \code{geom_name = NA}) or a
 #'   Spatial[Points/Lines/Polygons]DataFrame containing the query result. If a
 #'   hstore column is present, it appears as a list-column in the data frame,
@@ -39,10 +42,18 @@
 #'   to a PostgreSQL connection.
 #' @export
 get_postgis_query <- function(conn, statement, geom_name = NA_character_,
-                              hstore_name = NA_character_) {
+                              hstore_name = NA_character_,
+                              mod_spatialite = 'mod_spatialite') {
     # Check inputs
-    if (!is(conn, "PostgreSQLConnection")) {
-        stop("conn is not a valid PostgreSQL connection")
+    if (!is(conn, "PostgreSQLConnection") & !is(conn, "SQLiteConnection")) {
+        stop("conn is not a valid PostgreSQL or SQLite connection")
+    }
+    if (is(conn, "SQLiteConnection")) {
+        if (conn@loadable.extensions == TRUE) {
+            RSQLite::dbSendQuery(conn, paste0("SELECT load_extension('", mod_spatialite, "')"))
+        } else {
+            stop(paste0("Loadable extensions not enabled on ", conn@dbname))
+        }
     }
     if (length(statement) != 1 | !grepl("^select", tolower(statement))) {
         stop("statement does not appear to be a SELECT query")

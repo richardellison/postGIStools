@@ -5,17 +5,21 @@
 \title{Send SELECT query and parse geometry, hstore columns}
 \usage{
 get_postgis_query(conn, statement, geom_name = NA_character_,
-  hstore_name = NA_character_)
+  hstore_name = NA_character_, mod_spatialite = "mod_spatialite")
 }
 \arguments{
-\item{conn}{A \code{\link[RPostgreSQL]{PostgreSQLConnection-class}} object,
-such as the output of \code{\link[DBI]{dbConnect}}.}
+\item{conn}{A \code{\link[RPostgreSQL]{PostgreSQLConnection-class}} or
+\code{\link[RSQLite]{SQLiteConnection-class}} object,
+  such as the output of \code{\link[DBI]{dbConnect}}.}
 
 \item{statement}{Character string for a SQL SELECT query.}
 
 \item{geom_name}{Name of the geometry column (\code{NA} if none).}
 
 \item{hstore_name}{Name of the hstore column (\code{NA} if none).}
+
+\item{mod_spatialite}{Shared library containing the spatialite extension if
+conn is a SQLiteConnection.}
 }
 \value{
 Either a data frame (if \code{geom_name = NA}) or a
